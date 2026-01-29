@@ -1,6 +1,8 @@
 package gitops
 
 import (
+	"bytes"
+
 	"git-genius/internal/config"
 	"git-genius/internal/system"
 	"git-genius/internal/ui"
@@ -16,6 +18,17 @@ func CurrentBranch() string {
 
 func CurrentRemote() string {
 	return config.Load().Remote
+}
+
+/*
+isWorkingTreeDirty checks if there are uncommitted changes
+*/
+func isWorkingTreeDirty() bool {
+	var out bytes.Buffer
+	cmd := system.GitCmd("status", "--porcelain")
+	cmd.Stdout = &out
+	_ = cmd.Run()
+	return out.Len() > 0
 }
 
 /* ============================================================
@@ -147,4 +160,117 @@ func SwitchRemote() {
 	config.Save(cfg)
 
 	ui.Success("Remote set to: " + name)
+}
+
+/* ============================================================
+   Stash Operations
+   ============================================================ */
+
+func StashSave() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
+	msg := ui.Input("Stash message (optional)")
+	args := []string{"stash", "push"}
+	if msg != "" {
+		args = append(args, "-m", msg)
+	}
+
+	if err := system.RunGit(args...); err != nil {
+		ui.Error("Failed to stash changes")
+		return
+	}
+
+	ui.Success("Changes stashed successfully")
+}
+
+func StashList() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
+	if err := system.RunGit("stash", "list"); err != nil {
+		ui.Error("Failed to list stashes")
+	}
+}
+
+func StashPop() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
+	if err := system.RunGit("stash", "pop"); err != nil {
+		ui.Error("Failed to apply stash")
+		return
+	}
+
+	ui.Success("Stash applied successfully")
+}
+
+/* ============================================================
+   Undo Operations
+   ============================================================ */
+
+func UndoLastCommit() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
+	if !ui.Confirm("Undo last commit? (changes will be kept)") {
+		ui.Warn("Undo cancelled")
+		return
+	}
+
+	if err := system.RunGit("reset", "--soft", "HEAD~1"); err != nil {
+		ui.Error("Failed to undo last commit")
+		return
+	}
+
+	ui.Success("Last commit undone (changes preserved)")
+}
+
+/* ============================================================
+   Smart Pull (Auto-stash + Pull + Pop)
+   ============================================================ */
+
+func SmartPull() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
+	stashed := false
+
+	if isWorkingTreeDirty() {
+		ui.Warn("Uncommitted changes detected")
+		if !ui.Confirm("Stash changes and continue pull?") {
+			ui.Warn("Smart pull cancelled")
+			return
+		}
+
+		if err := system.RunGit("stash", "push", "-m", "git-genius-auto-stash"); err != nil {
+			ui.Error("Auto-stash failed")
+			return
+		}
+		stashed = true
+		ui.Success("Changes auto-stashed")
+	}
+
+	cfg := config.Load()
+	ui.Info("Pulling latest changes...")
+	if err := system.RunGit("pull", cfg.Remote, cfg.Branch); err != nil {
+		ui.Error("Pull failed")
+		return
+	}
+
+	if stashed {
+		ui.Info("Restoring stashed changes...")
+		if err := system.RunGit("stash", "pop"); err != nil {
+			ui.Warn("Failed to auto-apply stash — apply manually")
+			return
+		}
+		ui.Success("Stash restored successfully")
+	}
+
+	ui.Success("Smart pull completed")
 }

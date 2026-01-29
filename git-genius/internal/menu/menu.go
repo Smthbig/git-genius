@@ -26,7 +26,7 @@ func Start() {
 			projectDir, _ = os.Getwd()
 		}
 
-		// -------- Context Panel --------
+		// ---------------- Context Panel ----------------
 		fmt.Println("Project :", filepath.Base(projectDir))
 		fmt.Println("Path    :", projectDir)
 		fmt.Println("Branch  :", gitops.CurrentBranch())
@@ -37,18 +37,35 @@ func Start() {
 		}
 		fmt.Println()
 
-		// -------- Menu --------
+		// ---------------- Menu ----------------
+		fmt.Println("=== Daily Git Operations ===")
 		fmt.Println("1) Push changes")
 		fmt.Println("2) Pull changes")
-		fmt.Println("3) Fetch all remotes")
-		fmt.Println("4) Switch branch")
-		fmt.Println("5) Switch remote")
-		fmt.Println("6) Git status")
-		fmt.Println("7) Setup / Reconfigure")
-		fmt.Println("8) Doctor (health check)")
-		fmt.Println("9) Exit")
+		fmt.Println("3) Smart Pull (auto stash)")
+		fmt.Println("4) Fetch all remotes")
+		fmt.Println("5) Git status")
+		fmt.Println()
+
+		fmt.Println("=== Branch / Remote ===")
+		fmt.Println("6) Switch branch")
+		fmt.Println("7) Switch remote")
+		fmt.Println()
+
+		fmt.Println("=== Stash & Undo ===")
+		fmt.Println("8) Stash changes")
+		fmt.Println("9) Stash list")
+		fmt.Println("10) Stash pop")
+		fmt.Println("11) Undo last commit")
+		fmt.Println()
+
+		fmt.Println("=== Tools ===")
+		fmt.Println("12) Setup / Reconfigure")
+		fmt.Println("13) Doctor (health check)")
+		fmt.Println("14) Exit")
 
 		switch ui.Input("Select option") {
+
+		// ---- Daily ops ----
 		case "1":
 			gitops.Push(ui.Input("Commit message"))
 
@@ -56,24 +73,42 @@ func Start() {
 			gitops.Pull()
 
 		case "3":
-			gitops.Fetch()
+			gitops.SmartPull()
 
 		case "4":
-			gitops.SwitchBranch()
+			gitops.Fetch()
 
 		case "5":
-			gitops.SwitchRemote()
-
-		case "6":
 			gitops.Status()
 
-		case "7":
-			setup.Run()
+		// ---- Branch / Remote ----
+		case "6":
+			gitops.SwitchBranch()
 
+		case "7":
+			gitops.SwitchRemote()
+
+		// ---- Stash & Undo ----
 		case "8":
-			doctor.Run()
+			gitops.StashSave()
 
 		case "9":
+			gitops.StashList()
+
+		case "10":
+			gitops.StashPop()
+
+		case "11":
+			gitops.UndoLastCommit()
+
+		// ---- Tools ----
+		case "12":
+			setup.Run()
+
+		case "13":
+			doctor.Run()
+
+		case "14":
 			ui.Info("Goodbye 👋")
 			os.Exit(0)
 

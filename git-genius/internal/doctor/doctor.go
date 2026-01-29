@@ -62,6 +62,7 @@ func checkGitRepo() {
 		ui.Success("Git repository detected")
 	} else {
 		ui.Warn("No git repository found in project directory")
+		ui.Info("Run Setup to initialize git repository")
 	}
 }
 
@@ -71,12 +72,14 @@ func checkGitConfig() {
 
 	if name == "" {
 		ui.Warn("git user.name not set")
+		ui.Info("Run: git config --global user.name \"Your Name\"")
 	} else {
 		ui.Success("git user.name: " + name)
 	}
 
 	if email == "" {
 		ui.Warn("git user.email not set")
+		ui.Info("Run: git config --global user.email \"you@example.com\"")
 	} else {
 		ui.Success("git user.email: " + email)
 	}
@@ -95,6 +98,7 @@ func checkInternet() {
 		ui.Success("Internet connection available")
 	} else {
 		ui.Warn("Offline mode detected")
+		ui.Info("GitHub validation & push may fail")
 	}
 }
 
@@ -102,12 +106,14 @@ func checkGitHubToken() {
 	token := github.Get()
 	if token == "" {
 		ui.Warn("GitHub token not configured")
+		ui.Info("Run Setup to configure GitHub authentication")
 		return
 	}
 
 	user, err := github.Validate()
 	if err != nil {
-		ui.Error("GitHub token invalid")
+		ui.Error("GitHub token invalid or expired")
+		ui.Info("Run Setup to reconfigure token")
 		return
 	}
 
@@ -130,7 +136,8 @@ func checkErrorLog() {
 	logPath := filepath.Join(base, ".git", ".genius", "error.log")
 
 	if _, err := os.Stat(logPath); err == nil {
-		ui.Warn("Error log exists: " + logPath)
+		ui.Warn("Error log exists")
+		ui.Info("Check: " + logPath)
 	} else {
 		ui.Success("No error log found")
 	}

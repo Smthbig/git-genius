@@ -9,11 +9,28 @@ import (
 	"git-genius/internal/ui"
 )
 
+/* ============================================================
+   Core Git Executor
+   ============================================================ */
+
 /*
 RunGit executes a git command in the selected project directory
 and logs errors centrally.
 */
 func RunGit(args ...string) error {
+	cmd := GitCmd(args...)
+	if err := cmd.Run(); err != nil {
+		LogError("git "+strings.Join(args, " "), err)
+		return err
+	}
+	return nil
+}
+
+/*
+GitCmd returns a prepared *exec.Cmd for git,
+used when caller needs stdout/stderr control.
+*/
+func GitCmd(args ...string) *exec.Cmd {
 	cmd := exec.Command("git", args...)
 
 	// Run inside selected WorkDir (if set)
@@ -24,13 +41,12 @@ func RunGit(args ...string) error {
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		LogError("git "+strings.Join(args, " "), err)
-		return err
-	}
-	return nil
+	return cmd
 }
+
+/* ============================================================
+   Repo Checks
+   ============================================================ */
 
 /*
 IsGitRepo checks if the selected directory is a git repository
@@ -47,7 +63,7 @@ func IsGitRepo() bool {
 }
 
 /*
-EnsureGitRepo makes sure the selected directory is a git repo.
+EnsureGitRepo ensures the selected directory is a git repository.
 If not, it asks user permission to initialize it.
 */
 func EnsureGitRepo() bool {

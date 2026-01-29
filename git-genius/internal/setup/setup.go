@@ -18,7 +18,8 @@ func Run() {
 	ui.Header("Git Genius Setup")
 
 	// STEP 0: Select project directory
-	if !selectWorkDir() {
+	cfg := config.Load()
+	if !selectWorkDir(&cfg) {
 		return
 	}
 
@@ -26,8 +27,6 @@ func Run() {
 	if !system.EnsureGitRepo() {
 		return
 	}
-
-	cfg := config.Load()
 
 	// STEP 2: Basic git config
 	setupGitBasics(&cfg)
@@ -56,15 +55,16 @@ func Run() {
    STEP 0: Project directory selection
    ============================================================ */
 
-func selectWorkDir() bool {
-	cfg := config.Load()
-
+func selectWorkDir(cfg *config.Config) bool {
 	cwd, _ := os.Getwd()
+
 	ui.Info("Current directory: " + cwd)
 
-	if !ui.Confirm("Do you want to use a DIFFERENT project directory?") {
+	if cfg.WorkDir == "" {
 		cfg.WorkDir = cwd
-		config.Save(cfg)
+	}
+
+	if !ui.Confirm("Do you want to use a DIFFERENT project directory?") {
 		return true
 	}
 
@@ -81,8 +81,6 @@ func selectWorkDir() bool {
 	}
 
 	cfg.WorkDir = dir
-	config.Save(cfg)
-
 	ui.Success("Project directory set to: " + dir)
 	return true
 }
@@ -108,8 +106,8 @@ func setupGitBasics(cfg *config.Config) {
 func setupRepo(cfg *config.Config) bool {
 	ui.Header("GitHub Repository")
 
-	// Suggest repo name from folder
-	if cfg.Repo == "" {
+	// Suggest repo name from project folder
+	if cfg.Repo == "" && cfg.WorkDir != "" {
 		base := filepath.Base(cfg.WorkDir)
 		if base != "" {
 			cfg.Repo = base
@@ -130,7 +128,7 @@ func setupRepo(cfg *config.Config) bool {
 	}
 
 	ui.Info(fmt.Sprintf(
-		"Target repo: https://github.com/%s/%s",
+		"Target repository: https://github.com/%s/%s",
 		cfg.Owner, cfg.Repo,
 	))
 
@@ -195,7 +193,7 @@ func setupGitHubToken(cfg *config.Config) bool {
 		return false
 	}
 
-	ui.Success("Git remote configured with token")
+	ui.Success("Git remote configured successfully")
 	return true
 }
 
