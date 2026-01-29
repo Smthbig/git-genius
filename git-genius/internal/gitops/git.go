@@ -6,7 +6,9 @@ import (
 	"git-genius/internal/ui"
 )
 
-/* Helpers */
+/* ============================================================
+   Helpers
+   ============================================================ */
 
 func CurrentBranch() string {
 	return config.Load().Branch
@@ -16,9 +18,15 @@ func CurrentRemote() string {
 	return config.Load().Remote
 }
 
-/* Core Git Operations */
+/* ============================================================
+   Core Git Operations
+   ============================================================ */
 
 func Status() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
 	if err := system.RunGit("status"); err != nil {
 		ui.Error("Failed to get git status (see error.log)")
 	}
@@ -27,6 +35,10 @@ func Status() {
 func Push(msg string) {
 	if msg == "" {
 		ui.Error("Commit message cannot be empty")
+		return
+	}
+
+	if !system.EnsureGitRepo() {
 		return
 	}
 
@@ -50,6 +62,10 @@ func Push(msg string) {
 }
 
 func Pull() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
 	cfg := config.Load()
 
 	ui.Info("Fetching latest changes...")
@@ -68,6 +84,10 @@ func Pull() {
 }
 
 func Fetch() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
 	if err := system.RunGit("fetch", "--all"); err != nil {
 		ui.Error("Fetch failed")
 		return
@@ -75,9 +95,15 @@ func Fetch() {
 	ui.Success("Fetched all remotes")
 }
 
-/* Branch & Remote */
+/* ============================================================
+   Branch & Remote
+   ============================================================ */
 
 func SwitchBranch() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
 	name := ui.Input("New branch name")
 	if name == "" {
 		ui.Error("Branch name cannot be empty")
@@ -97,6 +123,10 @@ func SwitchBranch() {
 }
 
 func SwitchRemote() {
+	if !system.EnsureGitRepo() {
+		return
+	}
+
 	name := ui.Input("Remote name")
 	url := ui.Input("Remote URL")
 

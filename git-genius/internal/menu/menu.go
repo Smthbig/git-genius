@@ -3,7 +3,9 @@ package menu
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"git-genius/internal/config"
 	"git-genius/internal/doctor"
 	"git-genius/internal/gitops"
 	"git-genius/internal/setup"
@@ -15,12 +17,27 @@ func Start() {
 		ui.Clear()
 		ui.Header("Git Genius v1.0")
 
-		// Current context
-		fmt.Println("Branch :", gitops.CurrentBranch())
-		fmt.Println("Remote :", gitops.CurrentRemote())
+		// Load config for context
+		cfg := config.Load()
+
+		// Resolve project directory
+		projectDir := cfg.WorkDir
+		if projectDir == "" {
+			projectDir, _ = os.Getwd()
+		}
+
+		// -------- Context Panel --------
+		fmt.Println("Project :", filepath.Base(projectDir))
+		fmt.Println("Path    :", projectDir)
+		fmt.Println("Branch  :", gitops.CurrentBranch())
+		fmt.Println("Remote  :", gitops.CurrentRemote())
+
+		if cfg.Owner != "" && cfg.Repo != "" {
+			fmt.Println("Repo    :", "https://github.com/"+cfg.Owner+"/"+cfg.Repo)
+		}
 		fmt.Println()
 
-		// Menu options
+		// -------- Menu --------
 		fmt.Println("1) Push changes")
 		fmt.Println("2) Pull changes")
 		fmt.Println("3) Fetch all remotes")
@@ -31,9 +48,7 @@ func Start() {
 		fmt.Println("8) Doctor (health check)")
 		fmt.Println("9) Exit")
 
-		choice := ui.Input("Select option")
-
-		switch choice {
+		switch ui.Input("Select option") {
 		case "1":
 			gitops.Push(ui.Input("Commit message"))
 

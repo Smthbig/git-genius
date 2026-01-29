@@ -3,7 +3,6 @@ package setup
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"git-genius/internal/config"
@@ -18,17 +17,27 @@ Run executes the full guided setup
 func Run() {
 	ui.Header("Git Genius Setup")
 
-	// ---- Folder / repo sanity check ----
-	if !ensureGitRepo() {
+	// STEP 0: Select project directory
+	if !selectWorkDir() {
+		return
+	}
+
+	// STEP 1: Ensure git repo (ask + init if missing)
+	if !system.EnsureGitRepo() {
 		return
 	}
 
 	cfg := config.Load()
 
+	// STEP 2: Basic git config
 	setupGitBasics(&cfg)
+
+	// STEP 3: GitHub repo selection
 	if !setupRepo(&cfg) {
 		return
 	}
+
+	// STEP 4: GitHub auth + remote
 	if !setupGitHubToken(&cfg) {
 		return
 	}
@@ -36,35 +45,45 @@ func Run() {
 	config.Save(cfg)
 
 	ui.Header("Setup Summary")
-	ui.Success("Repository : https://github.com/" + cfg.Owner + "/" + cfg.Repo)
-	ui.Success("Remote     : " + cfg.Remote)
-	ui.Success("Branch     : " + cfg.Branch)
+	ui.Success("Project Dir : " + cfg.WorkDir)
+	ui.Success("Repository  : https://github.com/" + cfg.Owner + "/" + cfg.Repo)
+	ui.Success("Remote      : " + cfg.Remote)
+	ui.Success("Branch      : " + cfg.Branch)
 	ui.Success("Setup completed successfully 🎉")
 }
 
 /* ============================================================
-   STEP 0: Folder / directory safety
+   STEP 0: Project directory selection
    ============================================================ */
 
-func ensureGitRepo() bool {
-	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
-	if err := cmd.Run(); err == nil {
+func selectWorkDir() bool {
+	cfg := config.Load()
+
+	cwd, _ := os.Getwd()
+	ui.Info("Current directory: " + cwd)
+
+	if !ui.Confirm("Do you want to use a DIFFERENT project directory?") {
+		cfg.WorkDir = cwd
+		config.Save(cfg)
 		return true
 	}
 
-	ui.Warn("This directory is not a git repository")
-
-	if !ui.Confirm("Do you want to initialize git here?") {
-		ui.Error("Setup aborted")
+	dir := ui.Input("Enter full path of project directory")
+	if dir == "" {
+		ui.Error("Directory path cannot be empty")
 		return false
 	}
 
-	if err := system.RunGit("init"); err != nil {
-		ui.Error("Failed to initialize git repository")
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		ui.Error("Invalid directory path")
 		return false
 	}
 
-	ui.Success("Git repository initialized")
+	cfg.WorkDir = dir
+	config.Save(cfg)
+
+	ui.Success("Project directory set to: " + dir)
 	return true
 }
 
@@ -91,8 +110,10 @@ func setupRepo(cfg *config.Config) bool {
 
 	// Suggest repo name from folder
 	if cfg.Repo == "" {
-		cwd, _ := os.Getwd()
-		cfg.Repo = filepath.Base(cwd)
+		base := filepath.Base(cfg.WorkDir)
+		if base != "" {
+			cfg.Repo = base
+		}
 	}
 
 	if cfg.Owner == "" {
@@ -195,6 +216,5 @@ func configureRemoteWithToken(cfg *config.Config, token string) error {
 }
 
 func remoteExists(name string) bool {
-	cmd := exec.Command("git", "remote", "get-url", name)
-	return cmd.Run() == nil
+	return system.RunGit("remote", "get-url", name) == nil
 }

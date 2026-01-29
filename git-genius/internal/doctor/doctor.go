@@ -3,6 +3,7 @@ package doctor
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"git-genius/internal/config"
@@ -15,8 +16,9 @@ import (
 func Run() {
 	ui.Header("Git Genius Doctor 🩺")
 
-	checkGit()
-	checkRepo()
+	checkGitInstalled()
+	checkWorkDir()
+	checkGitRepo()
 	checkGitConfig()
 	checkInternet()
 	checkGitHubToken()
@@ -25,9 +27,11 @@ func Run() {
 	ui.Success("Doctor check completed")
 }
 
-// ---------------- CHECKS ----------------
+/* ============================================================
+   CHECKS
+   ============================================================ */
 
-func checkGit() {
+func checkGitInstalled() {
 	if _, err := exec.LookPath("git"); err != nil {
 		ui.Error("Git not installed")
 	} else {
@@ -35,12 +39,29 @@ func checkGit() {
 	}
 }
 
-func checkRepo() {
-	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
-	if err := cmd.Run(); err != nil {
-		ui.Error("Not inside a git repository")
+func checkWorkDir() {
+	cfg := config.Load()
+
+	if cfg.WorkDir == "" {
+		cwd, _ := os.Getwd()
+		ui.Info("Project directory (current): " + cwd)
+		return
+	}
+
+	info, err := os.Stat(cfg.WorkDir)
+	if err != nil || !info.IsDir() {
+		ui.Error("Configured project directory not found: " + cfg.WorkDir)
+		return
+	}
+
+	ui.Success("Project directory: " + cfg.WorkDir)
+}
+
+func checkGitRepo() {
+	if system.IsGitRepo() {
+		ui.Success("Git repository detected")
 	} else {
-		ui.Success("Inside a git repository")
+		ui.Warn("No git repository found in project directory")
 	}
 }
 
@@ -61,8 +82,12 @@ func checkGitConfig() {
 	}
 
 	cfg := config.Load()
-	ui.Info("Default branch: " + cfg.Branch)
-	ui.Info("Default remote: " + cfg.Remote)
+	ui.Info("Default branch : " + cfg.Branch)
+	ui.Info("Default remote : " + cfg.Remote)
+
+	if cfg.Owner != "" && cfg.Repo != "" {
+		ui.Info("GitHub repo     : https://github.com/" + cfg.Owner + "/" + cfg.Repo)
+	}
 }
 
 func checkInternet() {
@@ -95,17 +120,35 @@ func checkGitHubToken() {
 }
 
 func checkErrorLog() {
-	if _, err := os.Stat(".git/.genius/error.log"); err == nil {
-		ui.Warn("Error log exists (.git/.genius/error.log)")
+	cfg := config.Load()
+
+	base := cfg.WorkDir
+	if base == "" {
+		base, _ = os.Getwd()
+	}
+
+	logPath := filepath.Join(base, ".git", ".genius", "error.log")
+
+	if _, err := os.Stat(logPath); err == nil {
+		ui.Warn("Error log exists: " + logPath)
 	} else {
 		ui.Success("No error log found")
 	}
 }
 
-// ---------------- HELPERS ----------------
+/* ============================================================
+   HELPERS
+   ============================================================ */
 
 func gitConfig(key string) string {
-	out, err := exec.Command("git", "config", "--get", key).Output()
+	cmd := exec.Command("git", "config", "--get", key)
+
+	cfg := config.Load()
+	if cfg.WorkDir != "" {
+		cmd.Dir = cfg.WorkDir
+	}
+
+	out, err := cmd.Output()
 	if err != nil {
 		return ""
 	}

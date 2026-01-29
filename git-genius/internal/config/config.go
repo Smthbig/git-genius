@@ -18,6 +18,9 @@ type Config struct {
 	// GitHub specific
 	Owner string `json:"owner"` // username or organisation
 	Repo  string `json:"repo"`  // repository name
+
+	// Project directory
+	WorkDir string `json:"work_dir"` // 👈 NEW: path of project to operate on
 }
 
 // Load reads config from .git/.genius/config.json
@@ -33,12 +36,16 @@ func Load() Config {
 		return defaultConfig()
 	}
 
-	// Backward compatibility (older configs)
+	// Backward compatibility / safety
 	if c.Branch == "" {
 		c.Branch = "main"
 	}
 	if c.Remote == "" {
 		c.Remote = "origin"
+	}
+	if c.WorkDir == "" {
+		// empty means: use current directory
+		c.WorkDir = ""
 	}
 
 	return c
@@ -59,9 +66,10 @@ func Save(c Config) {
 // defaultConfig returns sane defaults
 func defaultConfig() Config {
 	return Config{
-		Branch: "main",
-		Remote: "origin",
-		Owner:  "",
-		Repo:   "",
+		Branch:  "main",
+		Remote:  "origin",
+		Owner:   "",
+		Repo:    "",
+		WorkDir: "", // empty = current working directory
 	}
 }

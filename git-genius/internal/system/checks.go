@@ -13,10 +13,11 @@ import (
 
 var Online bool = false
 
-// -------------------- GIT CHECK & INSTALL --------------------
+/* ============================================================
+   GIT CHECK & INSTALL
+   ============================================================ */
 
 func EnsureGitInstalled() {
-	// ✅ FIX: err declared OUTSIDE if (Go scoping rule)
 	_, err := exec.LookPath("git")
 	if err == nil {
 		return // Git already installed
@@ -26,14 +27,14 @@ func EnsureGitInstalled() {
 	LogError("git not installed", err)
 	ui.Error("Git is not installed on this system")
 
-	// Windows: do not auto-install
+	// Windows: no auto-install
 	if runtime.GOOS == "windows" {
 		ui.Warn("Automatic Git install is not supported on Windows")
 		ui.Info("Download Git from: https://git-scm.com/downloads")
 		os.Exit(1)
 	}
 
-	// Ask user for permission
+	// Ask user
 	if !ui.Confirm("Do you want to install Git now?") {
 		ui.Error("Git is required to continue")
 		os.Exit(1)
@@ -49,7 +50,9 @@ func EnsureGitInstalled() {
 	ui.Success("Git installed successfully 🎉")
 }
 
-// -------------------- INSTALL LOGIC --------------------
+/* ============================================================
+   INSTALL LOGIC
+   ============================================================ */
 
 func installGit() error {
 	switch runtime.GOOS {
@@ -63,7 +66,6 @@ func installGit() error {
 }
 
 func installGitLinux() error {
-	// Detect package manager
 	if exists("apt") {
 		return runInstall("sudo apt update && sudo apt install -y git")
 	}
@@ -84,7 +86,6 @@ func installGitLinux() error {
 }
 
 func installGitMac() error {
-	// Try Homebrew
 	if exists("brew") {
 		return runInstall("brew install git")
 	}
@@ -97,7 +98,9 @@ func installGitMac() error {
 	return cmd.Run()
 }
 
-// -------------------- HELPERS --------------------
+/* ============================================================
+   HELPERS
+   ============================================================ */
 
 func exists(cmd string) bool {
 	_, err := exec.LookPath(cmd)
@@ -112,16 +115,9 @@ func runInstall(command string) error {
 	return cmd.Run()
 }
 
-// -------------------- OTHER SYSTEM CHECKS --------------------
-
-func EnsureGitRepo() {
-	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
-	if err := cmd.Run(); err != nil {
-		LogError("not inside git repo", err)
-		ui.Error("This is not a git repository")
-		os.Exit(1)
-	}
-}
+/* ============================================================
+   NETWORK CHECK
+   ============================================================ */
 
 func CheckInternet() {
 	client := http.Client{Timeout: 3 * time.Second}
