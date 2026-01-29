@@ -1,0 +1,16 @@
+git-genius/
+│
+├── cmd/
+│   └── genius/
+│       └── main.go        # entry point
+│
+├── internal/
+│   ├── menu/              # interactive loop
+│   ├── gitops/            # git commands
+│   ├── config/            # .git/.genius
+│   ├── system/            # checks (git, net)
+│   └── ui/                # colors, prompts
+│
+├── go.mod
+├── README.md
+└── LICENSE
